@@ -1,0 +1,31 @@
+# .gitlab-ci.yml
+
+image: earthly/earthly
+variables:
+  EARTHLY_BUILDKIT_HOST: "tcp://earthly.earthly.svc.cluster.local:8372"
+
+before_script:
+  - export FORCE_COLOR=1
+  - earthly bootstrap
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+build:
+  stage: build
+  tags:
+    - production
+  script:
+    - >
+      earthly --buildkit-host tcp://earthly.earthly.svc.cluster.local:8372 
+      --ci --push -P +code-cov
+      --CODECOV_TOKEN=$CODECOV_TOKEN
+
+deploy-container:
+  stage: deploy
+  tags:
+    - production  
+  only:
+    - main
+  script:
+    - >
+      earthly --buildkit-host tcp://earthly.earthly.svc.cluster.local:8372 
+      --ci --push -P +distroless-native --TAG=${CI_COMMIT_SHORT_SHA}
